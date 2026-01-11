@@ -5,7 +5,7 @@ local PlayerCount = require("libs/PlayerCount")
 local M = {
 	SERVER_NAME = "",
 	MAX_PLAYERS = 0,
-	VERSION = 3,
+	VERSION = 4,
 }
 
 local function tableSize(table)
@@ -66,6 +66,16 @@ end
 M.scriptMessage = function(script_ref, message)
 	return {
 		type = 6,
+		content = {
+			script_ref = script_ref or '',
+			chat_message = message
+		}
+	}
+end
+
+M.scriptMessageNoBuf = function(script_ref, message)
+	return {
+		type = 8,
 		content = {
 			script_ref = script_ref or '',
 			chat_message = message

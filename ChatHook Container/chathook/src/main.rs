@@ -1,4 +1,5 @@
 // Made by Neverless @ BeamMP. Issues? Feel free to ask.
+// Im not exactly new to rust anymore, but i am rarely coding anything in it. So please dont expect beautiful code
 #![allow(non_snake_case)]
 
 mod ipapi;
@@ -15,7 +16,7 @@ use webhook::{Webhook, Embed, Field};
 use once_cell::sync::OnceCell;
 
 const VERSION: u8 = 1;
-const PROTOCOL_VERSION: u8 = 3;
+const PROTOCOL_VERSION: u8 = 4;
 
 static AVATAR_URL: OnceCell<String> = OnceCell::new();
 static WEBHOOK_URL: OnceCell<String> = OnceCell::new();
@@ -35,6 +36,11 @@ struct Content {
 }
 
 struct ScriptMessage {
+	pub script_ref: String,
+	pub chat_message: String,
+}
+
+struct ScriptMessageNoBuf {
 	pub script_ref: String,
 	pub chat_message: String,
 }
@@ -198,6 +204,15 @@ fn handleMessage(message: &Messages, content: &Content, profile_cache: &mut Hash
 				eprintln!("Invalid format for on player joining from {}", &message.from_server);
 			}
 		}
+		8 => {
+			if let Ok(chat) = decodeScriptMessageNoBuf(&content) {
+				if let Err(e) = sendScriptMessageNoBuf(&message, chat) {
+					eprintln!("{:?}", e);
+				}
+			} else {
+				eprintln!("Invalid format for on script message no buf from {}", &message.from_server);
+			}
+		}
 		_ => {
 			eprintln!("Invalid Option from {}", &message.from_server)
 		}
@@ -299,10 +314,24 @@ fn sendChatMessage(message: &Messages, chat: Chat) -> Result<(), webhook::Error>
 
 fn sendScriptMessage(chat: ScriptMessage, script_buf: &mut String)  {
 	if chat.script_ref.len() == 0 {
-		script_buf.push_str(&format!("> - ⚙️ **Server:** {}\n", cleanseString(&chat.chat_message)));
+		script_buf.push_str(&format!("{}\n", cleanseString(&chat.chat_message)));
 	} else {
 		script_buf.push_str(&format!("> - ⚙️ **{}:** {}\n", chat.script_ref, cleanseString(&chat.chat_message)));
 	}
+}
+
+fn sendScriptMessageNoBuf(message: &Messages, chat: ScriptMessageNoBuf) -> Result<(), webhook::Error> {
+	let mut content = String::new();
+	if chat.script_ref.len() == 0 {
+		content.push_str(&format!("{}\n", cleanseString(&chat.chat_message)));
+	} else {
+		content.push_str(&format!("> - ⚙️ **{}:** {}\n", chat.script_ref, cleanseString(&chat.chat_message)));
+	}
+	defaultWebhookHeader(&message.from_server)
+		.content(&content)
+		.send()?;
+
+	Ok(())
 }
 
 fn sendServerOnline(message: &Messages) -> Result <(), webhook::Error> {
@@ -405,6 +434,16 @@ fn decodeScriptMessage(content: &Content) -> Result<ScriptMessage, ()> {
 	if !content["chat_message"].is_string() || !content["script_ref"].is_string() {return Err(())}
 
 	Ok(ScriptMessage {
+		script_ref: content["script_ref"].as_str().unwrap().replace("@", ""),
+		chat_message: content["chat_message"].as_str().unwrap().replace("@", "")
+	})
+}
+
+fn decodeScriptMessageNoBuf(content: &Content) -> Result<ScriptMessageNoBuf, ()> {
+	let content = &content.content;
+	if !content["chat_message"].is_string() || !content["script_ref"].is_string() {return Err(())}
+
+	Ok(ScriptMessageNoBuf {
 		script_ref: content["script_ref"].as_str().unwrap().replace("@", ""),
 		chat_message: content["chat_message"].as_str().unwrap().replace("@", "")
 	})
