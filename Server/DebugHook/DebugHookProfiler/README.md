@@ -25,9 +25,10 @@ and not when
 
 
 If this is the case then simply open the single entrypoint file (eg main.lua) and on the very top copy 2 lines.
+```lua
 package.loaded["profiler/profiler"] = nil
 pcall(require, "profiler/profiler")
-
+```
 
 Then copy the "profiler" folder fom the DebugHookSampleScript folder into the same folder your main.lua file is in. Save and done.
 
