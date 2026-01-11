@@ -1,5 +1,5 @@
 -- Made by Neverless @ BeamMP. Issues? Feel free to ask.
-local VERSION = "0.1" -- 10.06.2025 (DD.MM.YYYY)
+local VERSION = "0.11" -- 11.01.2026 (DD.MM.YYYY)
 local SCRIPT_REF = "ChatHook"
 
 package.loaded["libs/Build"] = nil
@@ -9,21 +9,23 @@ package.loaded["libs/PlayerCount"] = nil
 package.loaded["libs/colors"] = nil
 package.loaded["libs/Log"] = nil
 
+local Log = require("libs/Log").setCollectMode(true)
 local Build = require("libs/Build")
 local UDPClient = require("libs/UDPClient")
 local ServerConfig = require("libs/ServerConfig")
 local PlayerCount = require("libs/PlayerCount")
 local Color = require("libs/colors")
-local Log = require("libs/Log").setCollectMode(true)
 
 local CHATHOOK_IP = "172.17.0.1"
 --local CHATHOOK_IP = "127.0.0.1"
 local UDP_PORT = 30813
 
-local Socket = nil
-
 local IS_START = _G.IS_START == nil
 _G.IS_START = true
+
+if not IS_START and Socket then Socket:close() end
+Socket = nil
+
 
 -- ----------------------------------------------------------------------
 -- Common
@@ -148,7 +150,7 @@ function onInit()
 		Log.fatal('Cannot find udp binary in "' .. bin_path .. '"', SCRIPT_REF)
 		return
 	end
-	
+
 	Log.load('> Building UDPSocket for ' .. CHATHOOK_IP .. ':' .. UDP_PORT, SCRIPT_REF)
 	Socket = UDPClient(bin_path, CHATHOOK_IP, UDP_PORT)
 	if Socket == nil then
