@@ -20,6 +20,11 @@ local CHATHOOK_IP = "172.17.0.1"
 --local CHATHOOK_IP = "127.0.0.1"
 local UDP_PORT = 30813
 
+-- WIP. Will prevent this script from listening to any regular events and instead will listen to onDebugMessage.
+-- Will also switch to the Build.scriptMessageNoBuf() method for improved in discord printing.
+local IS_DEBUG_HOOK = false
+if IS_DEBUG_HOOK then SCRIPT_REF = "DebugHook" end
+
 local IS_START = _G.IS_START == nil
 _G.IS_START = true
 
@@ -83,7 +88,11 @@ end
 
 function onScriptMessage(message, script_ref)
 	if message == nil or message:len() == 0 then return end
-	Buf:add(Build.scriptMessage(script_ref, message))
+	if not IS_DEBUG_HOOK then
+		Buf:add(Build.scriptMessage(script_ref, message))
+	else
+		Buf:add(Build.scriptMessageNoBuf(script_ref, message))
+	end
 end
 
 function onPlayerConnecting(player_id)
@@ -107,7 +116,7 @@ function onInit()
 	MP.RegisterEvent("chathook_bufprint", "bufPrint")
 	MP.CreateEventTimer("chathook_bufprint", 1000)
 	
-	Log.load("====. Loading ChatHook .====", SCRIPT_REF)
+	Log.load("====. Loading " .. SCRIPT_REF .. " .====", SCRIPT_REF)
 	Log.load("> Version: " .. VERSION, SCRIPT_REF)
 	Log.load("> Build Packet Version: " .. Build.VERSION, SCRIPT_REF)
 	Log.info("^ ^n(This must match with the ChatHook Container version)^r", SCRIPT_REF)
@@ -159,11 +168,16 @@ function onInit()
 	end
 	Log.ok('> Initizalized UDPSocket', SCRIPT_REF)
 	
-	MP.RegisterEvent("onChatMessage", "onChatMessage")
-	MP.RegisterEvent("onPlayerConnecting", "onPlayerConnecting")
-	MP.RegisterEvent("onPlayerJoin", "onPlayerJoin")
-	MP.RegisterEvent("onPlayerDisconnect", "onPlayerDisconnect")
-	MP.RegisterEvent("onScriptMessage", "onScriptMessage")
+	if not IS_DEBUG_HOOK then
+		MP.RegisterEvent("onChatMessage", "onChatMessage")
+		MP.RegisterEvent("onPlayerConnecting", "onPlayerConnecting")
+		MP.RegisterEvent("onPlayerJoin", "onPlayerJoin")
+		MP.RegisterEvent("onPlayerDisconnect", "onPlayerDisconnect")
+		MP.RegisterEvent("onScriptMessage", "onScriptMessage")
+	else
+		MP.RegisterEvent("onDebugMessage", "onScriptMessage")
+	end
+
 	
 	if IS_START then
 		Buf:add(Build.serverOnline())
@@ -177,6 +191,6 @@ function onInit()
 		Log.ok('Hotreloaded "' .. player_name .. '"', SCRIPT_REF)
 	end
 	
-	Log.load("=====. ChatHook Loaded .====", SCRIPT_REF)
+	Log.load("=====. " .. SCRIPT_REF .. " Loaded .====", SCRIPT_REF)
 	Log.printCollect()
 end
