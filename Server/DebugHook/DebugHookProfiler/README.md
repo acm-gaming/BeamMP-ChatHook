@@ -1,7 +1,7 @@
 # DebugHook (Profiler Addon - Advanced Users)
 
 This addon allows measuring all lua states event runtime performance.
-![img](img/debughook_profiler.jpg)
+![img](https://github.com/OfficialLambdax/BeamMP-ChatHook/blob/main/img/debughook_profiler.jpg?raw=true)
 
 
 In order to set this up
