@@ -1,0 +1,115 @@
+version: 2
+
+project_name: beammp-chathook
+
+builds:
+  - id: chathook-daemon
+    main: ./chathook-daemon/cmd/chathook-daemon
+    binary: chathook-daemon
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+  - id: udp-client
+    main: ./udp-client/cmd/udp-client
+    binary: Server/ChatHook/bin/udp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+  - id: rsocket-amd64
+    main: ./rsocket-module
+    binary: Server/ChatHook/rsocket
+    buildmode: c-shared
+    tags:
+      - lua_module
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - amd64
+    skip: "{{ or (eq .Runtime.Goarch \"arm64\") (index .Env \"SKIP_RSOCKET_AMD64\") }}"
+
+  - id: rsocket-arm64
+    main: ./rsocket-module
+    binary: Server/ChatHook/rsocket
+    buildmode: c-shared
+    tags:
+      - lua_module
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - arm64
+    skip: "{{ or (eq .Runtime.Goarch \"amd64\") (index .Env \"SKIP_RSOCKET_ARM64\") }}"
+
+archives:
+  - id: chathook-daemon
+    ids:
+      - chathook-daemon
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+  - id: server-assets
+    ids:
+      - udp-client
+      - rsocket-amd64
+      - rsocket-arm64
+    name_template: "chathook-server_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    allow_different_binary_count: true
+    files:
+      - src: Server/ChatHook/main.lua
+        dst: Server/ChatHook/main.lua
+      - src: Server/ChatHook/libs/**
+        dst: Server/ChatHook/libs
+        strip_parent: true
+      - src: Server/ChatHook/config.json
+        dst: Server/ChatHook/config.json
+      - src: Server/ChatHook/config.json.sample
+        dst: Server/ChatHook/config.json.sample
+      - src: .docker/compose.yaml
+        dst: docker-compose.yaml
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github-native
+
+dockers_v2:
+  - id: chathook-daemon
+    dockerfile: Dockerfile.release
+    ids:
+      - chathook-daemon
+    images:
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/beammp-chathook"
+    tags:
+      - "{{ .Version }}"
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64

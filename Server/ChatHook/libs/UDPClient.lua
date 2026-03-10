@@ -1,88 +1,128 @@
+---@diagnostic disable: undefined-global
+
 -- Made by Neverless @ BeamMP. Issues? Feel free to ask.
 --[[
-	Windows/Linux must unfortunately be seperated atm.
-	
-	io.popen takes exceptionally long to execute on linux for some reason.
-	So on windows the data is written to stdin, while on linux its given as an argument (with all its downsides of doing so)
-	
+	Windows/Linux must unfortunately be separated atm.
+
+	io.popen takes exceptionally long to execute on Linux for some reason.
+	So on Windows the data is written to stdin, while on Linux its given as an argument.
+
 	Use b64 encoding.
 ]]
 
 local Log = require("libs/Log")
-local RSocket -- loaded during init if Linux
+local RSocket
 
 local SCRIPT_REF = "libUDPClient"
 
-local function getUdpHandle(self)
+---@class ChatHookSocket
+---@field _os string
+---@field _bin string
+---@field _ip string
+---@field _port integer
+---@field _client any|nil
+---@field send fun(self: ChatHookSocket, data: string)
+---@field close fun(self: ChatHookSocket)
+
+---@param socket ChatHookSocket
+---@return file*|nil
+local function getUdpHandle(socket)
 	return io.popen(string.format(
-		'%s %s %s',
-		self._bin, self._ip, self._port
+		"%s %s %s",
+		socket._bin,
+		socket._ip,
+		socket._port
 	), "w")
 end
 
-local function sendWindows(self, data)
-	local handle = getUdpHandle(self)
-	if not handle then return end
-	
+---@param socket ChatHookSocket
+---@param data string
+local function sendWindows(socket, data)
+	local handle = getUdpHandle(socket)
+	if not handle then
+		return
+	end
+
 	handle:write(data)
 	handle:close()
 end
 
-local function sendLinux(self, data)
-	if self._client then
-		self._client:send(data)
-	else
-		os.execute(string.format(
-			'%s %s %s %s',
-			self._bin, self._ip, self._port, data
-		))
+---@param socket ChatHookSocket
+---@param data string
+local function sendLinux(socket, data)
+	if socket._client then
+		socket._client:send(data)
+		return
 	end
+
+	os.execute(string.format("%s %s %s %s", socket._bin, socket._ip, socket._port, data))
 end
 
-local function correctBinPath(os_name, bin_path)
-	if os_name == "Linux" then return bin_path end
-	if os_name == "Windows" then return bin_path:gsub("%/", "\\") end
+---@param osName string
+---@param binPath string
+---@return string|nil
+local function normalizeBinPath(osName, binPath)
+	if osName == "Linux" then
+		return binPath
+	end
+	if osName == "Windows" then
+		return binPath:gsub("%/", "\\")
+	end
 	return nil
 end
 
-return function(bin_path, ip, port)
-	local os_name = MP.GetOSName()
-	bin_path = correctBinPath(os_name, bin_path)
-	if not bin_path or not FS.Exists(bin_path) then return end
+---@param binPath string
+---@param ip string
+---@param port integer
+---@return ChatHookSocket|nil
+return function(binPath, ip, port)
+	local osName = MP.GetOSName()
+	binPath = normalizeBinPath(osName, binPath)
+	if not binPath or not FS.Exists(binPath) then
+		return nil
+	end
 
 	local client
-	if os_name == "Linux" then
-		local use_lib, lib = pcall(require, "rsocket")
-
-		if not use_lib then
-			Log.error('Cannot initialize RSocket. Using fallback.', SCRIPT_REF)
+	if osName == "Linux" then
+		local useLib, lib = pcall(require, "rsocket")
+		if not useLib then
+			Log.info("Optional rsocket module is unavailable. Using helper binary fallback.", SCRIPT_REF)
 		else
-			Log.load('Successfully loaded Experimental RSocket', SCRIPT_REF)
+			Log.load("Successfully loaded Go RSocket module", SCRIPT_REF)
 			RSocket = lib
-			local is_ok, socket = pcall(RSocket.udpClient, ip, port)
-			if not is_ok then
-				Log.error('Cannot create RSocket UDP client. Using fallback.', SCRIPT_REF)
+			local isOk, socket = pcall(RSocket.udpClient, ip, port)
+			if not isOk then
+				Log.error("Cannot create RSocket UDP client. Using helper binary fallback.", SCRIPT_REF)
 			else
 				Log.load("Using RSocket UDP client.", SCRIPT_REF)
 				client = socket
 			end
 		end
 	end
+
+	---@type ChatHookSocket
 	local udp = {
-		_os = os_name,
-		_bin = bin_path,
+		_os = osName,
+		_bin = binPath,
 		_ip = ip,
 		_port = port,
-		_client = client, -- nil/socket
+		_client = client,
 	}
+
 	function udp:send(data)
-		if self._os == "Windows" then return sendWindows(self, data) end
-		if self._os == "Linux" then return sendLinux(self, data) end
+		if self._os == "Windows" then
+			return sendWindows(self, data)
+		end
+		if self._os == "Linux" then
+			return sendLinux(self, data)
+		end
 	end
 
 	function udp:close()
-		if self._client then self._client:close() end
+		if self._client then
+			self._client:close()
+		end
 	end
-	
+
 	return udp
 end

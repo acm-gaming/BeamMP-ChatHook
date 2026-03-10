@@ -1,0 +1,7 @@
+FROM gcr.io/distroless/static:nonroot
+
+COPY chathook-daemon /usr/local/bin/chathook-daemon
+
+EXPOSE 30813/udp
+
+ENTRYPOINT ["/usr/local/bin/chathook-daemon"]

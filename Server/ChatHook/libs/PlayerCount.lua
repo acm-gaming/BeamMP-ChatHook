@@ -1,35 +1,51 @@
+---@diagnostic disable: undefined-global
+
 local M = {}
 
-local PLAYERS = {}
+---@type table<integer, boolean>
+local players = {}
 
-local function tableSize(table)
-	local size = 0
-	for _, _ in pairs(table) do
-		size = size + 1
+---@param playerId integer
+function M.add(playerId)
+	players[playerId] = true
+end
+
+---@param playerId integer
+---@return boolean?
+function M.remove(playerId)
+	if not M.exists(playerId) then
+		return
 	end
-	return size
-end
-
-M.add = function(player_id)
-	PLAYERS[player_id] = true
-end
-
-M.remove = function(player_id)
-	if not M.exists(player_id) then return end
-	PLAYERS[player_id] = nil
+	players[playerId] = nil
 	return true
 end
 
-M.exists = function(player_id)
-	return PLAYERS[player_id] ~= nil
+---@param playerId integer
+---@return boolean
+function M.exists(playerId)
+	return players[playerId] ~= nil
 end
 
-M.dif = function()
-	return tableSize(MP.GetPlayers() or {}) - M.count()
+---@return integer
+function M.diff()
+	local count = M.count()
+	if count == 0 then
+		return 0
+	end
+	local total = 0
+	for _, _ in pairs(MP.GetPlayers() or {}) do
+		total = total + 1
+	end
+	return total - count
 end
 
-M.count = function()
-	return tableSize(PLAYERS)
+---@return integer
+function M.count()
+	local total = 0
+	for _, _ in pairs(players) do
+		total = total + 1
+	end
+	return total
 end
 
 return M

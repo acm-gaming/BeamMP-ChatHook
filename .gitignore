@@ -1,6 +1,8 @@
-/ChatHook Container/# backup
-/ChatHook Container/chathook/target
-/ChatHook Container/.env
-/Server/ChatHook/bin/udp_src/target
-/Server/ChatHook/rsocket_src/target
+/dist
+/.docker/.env
 /Server/ChatHook/# backup
+.code
+/Server/ChatHook/bin/udp
+/Server/ChatHook/bin/udp.exe
+/Server/ChatHook/rsocket.so
+/dist/

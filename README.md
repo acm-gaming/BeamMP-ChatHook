@@ -1,143 +1,166 @@
 # BeamMP-ChatHook
-## A discord tool that posts your Server *happenings* to a discord Webhook!
 
+Posts your BeamMP server activity to a Discord webhook — player joins, leaves, chat messages, script events, and server restarts.
 
-# Featuring
-### - Server (re)starts!
+## Features
+
+**Server (re)starts**
 ![img](img/server_restart.jpg)
 
-### - Players in the joining process!
+**Players joining**
 ![img](img/player_joining.jpg)
 
-### - When the player has fully joined!
-- With BeamMP Profile picture, Country flag and VPN Check
-
+**Players fully joined** — with BeamMP profile picture, country flag, and VPN detection
 ![img](img/player_joined.jpg)
 
-### - When a player has left!
+**Players leaving**
 ![img](img/player_left.jpg)
 
-### - Chat Messages!
+**Chat messages**
 ![img](img/chat_message.jpg)
 
-### - Script messages!
+**Script messages**
 ![img](img/script_message.jpg)
 
-## Its half Smart
-- The ChatHook Seperates Fully joined players from still joining players (qued players) when it shows the Player count in any given message.
-- The ChatHook automatically pulls and caches player profile pictures for player join messages from the BeamMP forum api.
-- The ChatHook uses [ip-api.com](https://ip-api.com/) to get a result for each players country and if they are using a vpn or proxy
-- Chat Commands starting with a `/` are automatically ignored!
+## How it works
+
+- Player counts distinguish between players in the queue and those fully in-game.
+- Profile pictures are pulled and cached from the BeamMP forum API on player join.
+- Country and VPN/proxy detection is done via [ip-api.com](https://ip-api.com/).
+- Chat commands starting with `/` are silently ignored.
 
 ## For modders
-You can send Script messages to the webhook by simply doing this (Full discord formatting support including links!).
+
+Send custom messages to the webhook from Lua (full Discord formatting supported, including links):
+
 ```lua
 MP.TriggerGlobalEvent("onScriptMessage", "__**My Fancy Script message**__", "Script Name")
 ```
 
-# How to install
-### ChatHook
-ChatHook is a tool that runs independent from a BeamMP Server. All your BeamMP Servers can send it data with the Server side script (Instructions below).
+## Releases
 
-**To Install it you have 2 options**
+Releases are automated with `release-please` and GoReleaser. Conventional commits merged into `main` are collected into a release PR, and merging that PR creates a `vX.Y.Z` tag which triggers the release workflow. It publishes:
 
-In any case, clone this repository to your harddrive first!
+- Cross-platform Go binaries
+- Server bundle archives (Lua + UDP helper + rsocket module)
+- Multi-arch GHCR images: `ghcr.io/<owner>/beammp-chathook:<version>` and `ghcr.io/<owner>/beammp-chathook:latest`
 
-#### [Docker Compose](https://docs.docker.com/compose/)
+> If you want the publish workflow to trigger automatically from `release-please`, add a `RELEASE_PLEASE_TOKEN` repository secret backed by a GitHub PAT. The default `GITHUB_TOKEN` can open release PRs, but won't trigger downstream workflows from tags it creates.
+
+## Installation
+
+ChatHook runs independently from your BeamMP server(s). You install it once and any number of BeamMP servers can send data to it.
+
+### Daemon
+
+#### Docker Compose
+
 <details>
-<summary>Click to Open</summary>
+<summary>Click to expand</summary>
 
-1. Go into the `ChatHook Container` folder
-2. Rename `.env.example` to `.env`
-3. Open `.env` in the text editor of your choice. You will see
-```
-WEBHOOK_URL=https://discord.com/api/webhooks/*
+1. Rename `.docker/.env.example` to `.docker/.env` and open it:
+
+```env
+WEBHOOK_URL=https://discord.com/api/webhooks/...
 UDP_PORT=30813
 EXPOSE_TO_NETWORK=172.17.0.1
 AVATAR_URL=https://my-website.com/myImage.jpg
 ```
-- `WEBHOOK_URL` defines the webhook url you got from discord.
-- `UDP_PORT` defines the port it will listen to for messages from your BeamMP Servers
-- `EXPOSE_TO_NETWORK` defines the network to expose the port to. Note: If not changed, the container is bound to the `bridge` network, which by default has the gateway of `172.17.0.1`. You generally __never__ want to expose to `0.0.0.0`
-- `AVATAR_URL` defines the image used in the messages displayed in your discord channel!
 
-Edit these variables to your liking, save and then exit.
+- `WEBHOOK_URL` — the webhook URL from your Discord channel settings *(required)*
+- `UDP_PORT` — the port ChatHook listens on for messages from your BeamMP servers
+- `EXPOSE_TO_NETWORK` — the network interface to bind to. If left as `172.17.0.1`, the container binds to the Docker bridge gateway. You generally don't want to expose this to `0.0.0.0`.
+- `AVATAR_URL` — the avatar image shown on webhook messages *(optional)*
 
-4. Next open a Terminal in this directory.
-5. And simply install the container with `sudo docker compose up -d`
+2. Start the container:
+
+```sh
+sudo docker compose -f .docker/compose.yaml up -d
+```
 
 ![img](img/container_startup.jpg)
 
-Note: The Container is build in a self compiling way. Which means that updating any of the source files and then restarting the container will automatically trigger a recompile!
-
 </details>
 
+#### Manual build
 
-#### Manual
 <details>
-<summary>Click to Open</summary>
+<summary>Click to expand</summary>
 
-1. Install the [Rust Toolchain](https://www.rust-lang.org/)
-2. Go into `ChatHook Container/chathook`
-3. Open a Terminal/Cmd in this directory
-4. run `cargo build --release`. This will compile the tool!
-5. Within the `target/release` folder is the `chathook.exe`
+1. Install the [Go toolchain](https://go.dev/)
+2. From the repo root, build the binary:
 
-To run it you can setup an autostart in your Operating System.
-It will read the necessary information such as the webhook url from the environment or the given arguments.
-
-**Arguments**
-
-`chathook.exe webhook_url udp_port avatar_url`
-
-eg. `chathook.exe https://discord.com/api/webhooks/* 30814 https://my-website.com/myImage.jpg`
-
-
-**Environment Variables**
-
-Setting environment variables is different per Distribution (You will have to look this up).
+```sh
+go build ./chathook-daemon/cmd/chathook-daemon
 ```
-WEBHOOK_URL="https://discord.com/api/webhooks/*"
+
+This produces a `chathook-daemon` binary (or `chathook-daemon.exe` on Windows).
+
+3. Configure it via environment variables (how you set these depends on your OS/init system):
+
+```env
+WEBHOOK_URL=https://discord.com/api/webhooks/...
 UDP_PORT=30813
-AVATAR_URL=https://my-website.com/myImage.jpg
+AVATAR_URL=https://my-website.com/myImage.jpg  # optional
 ```
-- `WEBHOOK_URL` defines the webhook url you got from discord.
-- `UDP_PORT` defines the port it will listen to for messages from your BeamMP Servers
-- `AVATAR_URL` defines the image used in the messages displayed in your discord channel!
 
-Then simply start the ChatHook binary!
+Or pass them as flags:
+
+```sh
+chathook-daemon --webhook-url=https://discord.com/api/webhooks/... --udp-port=30813
+```
+
+4. Set it up to run on startup however your OS supports (systemd, Task Scheduler, etc.) and start it.
+
 </details>
 
 ---
+
 ![img](img/chathook_start.jpg)
 
+#### Network diagram
 
-#### Network Infographic
 <details>
-<summary>Click to Open</summary>
+<summary>Click to expand</summary>
 
 ![img](img/dedi_setup.jpg)
 
 </details>
 
+### BeamMP server
 
+1. Copy the `Server/ChatHook` folder into your server's `Resources/Server/` directory.
 
-### BeamMP Server
-1. Copy the `Server/ChatHook` folder to your Servers `Resources/Server` directory
-2. Open the `Resources/Server/ChatHook/main.lua` file in a text editor of your choice. You will see
-```lua
-local CHATHOOK_IP = "172.17.0.1"
-local UDP_PORT = 30813
+   If you're using a release bundle, the `bin/udp` binary (and `rsocket.so` on Linux) are already included. If building from source:
+
+   ```sh
+   # UDP helper
+   go build -o Server/ChatHook/bin/udp ./udp-client/cmd/udp-client
+
+   # Optional rsocket module (Linux only)
+   go build -tags lua_module -buildmode=c-shared -o Server/ChatHook/rsocket.so ./rsocket-module
+   ```
+
+2. Open `Resources/Server/ChatHook/config.json` and fill in your details:
+
+```json
+{
+  "serverName": "BeamMP ChatHook Server",
+  "maxPlayers": 8,
+  "chatHookIp": "172.17.0.1",
+  "udpPort": 30813,
+  "debugHook": false,
+  "flushIntervalMs": 1000
+}
 ```
-- `CHATHOOK_IP` set this to eg `127.0.0.1` or the IP of the ChatHook container that you defined earlier with `EXPOSE_TO_NETWORK`
-- `UDP_PORT` set this to the port of the ChatHook that you defined earlier with the `UDP_PORT`
 
-Then save and exit.
+- `chatHookIp` — set to `127.0.0.1` if the daemon is on the same machine, or the IP/address of your ChatHook container
+- `udpPort` — must match the `UDP_PORT` you configured on the daemon
+- `serverName` and `maxPlayers` should match your BeamMP server config
 
-3. Now simply start the BeamMP Server!
+3. Start (or restart) your BeamMP server.
 
 ![img](img/mp_server_startup.jpg)
 
-**If everything is setup right then you can now see the Server started message in your discord (:**
+If everything is set up correctly, you'll see the server started message appear in your Discord channel. The server-side script supports hot-reload, so you don't need to restart to pick up config changes.
 
-Note: The Serverside script is Hotreload safe.

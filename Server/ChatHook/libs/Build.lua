@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global
+
 -- Made by Neverless @ BeamMP. Issues? Feel free to ask.
 local Base64 = require("libs/base64")
 local PlayerCount = require("libs/PlayerCount")
@@ -8,119 +10,137 @@ local M = {
 	VERSION = 4,
 }
 
-local function tableSize(table)
-	local size = 0
-	for _, _ in pairs(table) do
-		size = size + 1
-	end
-	return size
+---@param payload table
+---@return string
+local function wrap(payload)
+	return Base64.encode(Util.JsonEncode(payload))
 end
 
-local function wrap(table)
-	return Base64.encode(Util.JsonEncode(table))
-end
-
+---@return table
 local function baseBuild()
 	return {
 		server_name = M.SERVER_NAME,
 		player_count = PlayerCount.count(),
-		player_dif = PlayerCount.dif(),
+		player_dif = PlayerCount.diff(),
 		player_max = M.MAX_PLAYERS,
-		version = M.VERSION
+		version = M.VERSION,
 	}
 end
 
-local function base(into)
-	local from = baseBuild()
-	for k, v in pairs(from) do
-		into[k] = v
+---@param payload table
+---@return table
+local function withBase(payload)
+	for key, value in pairs(baseBuild()) do
+		payload[key] = value
 	end
-	return into
+
+	return payload
 end
 
-
-M.setServerName = function(server_name)
-	M.SERVER_NAME = server_name
+---@param serverName string
+function M.setServerName(serverName)
+	M.SERVER_NAME = serverName
 end
 
-M.setMaxPlayers = function(max_players)
-	M.MAX_PLAYERS = max_players
+---@param maxPlayers integer
+function M.setMaxPlayers(maxPlayers)
+	M.MAX_PLAYERS = maxPlayers
 end
 
-M.wrap = function(contents)
-	return wrap(base({
-		contents = contents
+---@param contents table[]
+---@return string
+function M.wrap(contents)
+	return wrap(withBase({
+		contents = contents,
 	}))
 end
 
-M.playerMessage = function(player_id, message)
+---@param playerId integer
+---@param message string
+---@return table
+function M.playerMessage(playerId, message)
 	return {
 		type = 1,
 		content = {
-			player_name = MP.GetPlayerName(player_id),
-			chat_message = message
-		}
+			player_name = MP.GetPlayerName(playerId),
+			chat_message = message,
+		},
 	}
 end
 
-M.scriptMessage = function(script_ref, message)
+---@param messageScriptRef string|nil
+---@param message string
+---@return table
+function M.scriptMessage(messageScriptRef, message)
 	return {
 		type = 6,
 		content = {
-			script_ref = script_ref or '',
-			chat_message = message
-		}
+			script_ref = messageScriptRef or "",
+			chat_message = message,
+		},
 	}
 end
 
-M.scriptMessageNoBuf = function(script_ref, message)
+---@param messageScriptRef string|nil
+---@param message string
+---@return table
+function M.scriptMessageNoBuf(messageScriptRef, message)
 	return {
 		type = 8,
 		content = {
-			script_ref = script_ref or '',
-			chat_message = message
-		}
+			script_ref = messageScriptRef or "",
+			chat_message = message,
+		},
 	}
 end
 
-M.serverOnline = function()
+---@return table
+function M.serverOnline()
 	return {
 		type = 2,
 	}
 end
 
-M.serverReload = function()
+---@return table
+function M.serverReload()
 	return {
 		type = 5,
 	}
 end
 
-M.playerJoining = function(player_id)
+---@param playerId integer
+---@return table
+function M.playerJoining(playerId)
 	return {
 		type = 7,
 		content = {
-			player_name = MP.GetPlayerName(player_id)
-		}
+			player_name = MP.GetPlayerName(playerId),
+		},
 	}
 end
 
-M.playerJoin = function(player_id)
+---@param playerId integer
+---@return table
+function M.playerJoin(playerId)
 	return {
 		type = 3,
 		content = {
-			player_name = MP.GetPlayerName(player_id),
-			ip = MP.GetPlayerIdentifiers(player_id).ip
-		}
+			player_name = MP.GetPlayerName(playerId),
+			ip = MP.GetPlayerIdentifiers(playerId).ip,
+		},
 	}
 end
 
-M.playerLeft = function(player_id, early)
+---@param playerId integer
+---@param early boolean
+---@return table
+function M.playerLeft(playerId, early)
 	return {
 		type = 4,
 		content = {
-			player_name = MP.GetPlayerName(player_id),
-			early = early
-		}
+			player_name = MP.GetPlayerName(playerId),
+			early = early,
+		},
 	}
 end
 
