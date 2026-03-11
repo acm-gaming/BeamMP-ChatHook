@@ -22,6 +22,12 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	if cfg.AvatarURL != "env-avatar" {
 		t.Fatalf("expected env avatar, got %q", cfg.AvatarURL)
 	}
+	if cfg.ChatRateLimitCount != 6 {
+		t.Fatalf("expected default chat rate limit count 6, got %d", cfg.ChatRateLimitCount)
+	}
+	if cfg.ChatRateLimitWindowSec != 10 {
+		t.Fatalf("expected default chat rate limit window 10, got %d", cfg.ChatRateLimitWindowSec)
+	}
 }
 
 func TestLoadConfigDefaults(t *testing.T) {
@@ -38,5 +44,22 @@ func TestLoadConfigDefaults(t *testing.T) {
 	}
 	if cfg.LogLevel != "info" {
 		t.Fatalf("expected default log level info, got %q", cfg.LogLevel)
+	}
+}
+
+func TestLoadConfigChatRateLimitOverride(t *testing.T) {
+	t.Setenv("WEBHOOK_URL", "env-webhook")
+	t.Setenv("CHATHOOK_CHAT_RATE_LIMIT_COUNT", "12")
+	t.Setenv("CHATHOOK_CHAT_RATE_LIMIT_WINDOW_SEC", "30")
+
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("expected config to load: %v", err)
+	}
+	if cfg.ChatRateLimitCount != 12 {
+		t.Fatalf("expected rate limit count 12, got %d", cfg.ChatRateLimitCount)
+	}
+	if cfg.ChatRateLimitWindowSec != 30 {
+		t.Fatalf("expected rate limit window 30, got %d", cfg.ChatRateLimitWindowSec)
 	}
 }

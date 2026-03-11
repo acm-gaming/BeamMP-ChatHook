@@ -37,9 +37,24 @@ type Service struct {
 	httpClient   *http.Client
 	forumBaseURL string
 	ipAPIBaseURL string
+	chatLimiter  *chatRateLimiter
 
 	profileCache map[string]string
 	mu           sync.Mutex
+}
+
+type chatRateLimiter struct {
+	max    int
+	window time.Duration
+	now    func() time.Time
+
+	mu      sync.Mutex
+	entries map[string]chatRateLimitEntry
+}
+
+type chatRateLimitEntry struct {
+	windowStart time.Time
+	count       int
 }
 
 type packet struct {
@@ -135,6 +150,12 @@ func NewService(config Config, logger *log.Logger) *Service {
 	if logger == nil {
 		logger = log.New(io.Discard)
 	}
+
+	window := time.Duration(config.ChatRateLimitWindowSec) * time.Second
+	if config.ChatRateLimitCount <= 0 {
+		window = 0
+	}
+
 	return &Service{
 		config: config,
 		logger: logger,
@@ -143,6 +164,7 @@ func NewService(config Config, logger *log.Logger) *Service {
 		},
 		forumBaseURL: defaultForumBaseURL,
 		ipAPIBaseURL: defaultIPAPIBaseURL,
+		chatLimiter:  newChatRateLimiter(config.ChatRateLimitCount, window, time.Now),
 		profileCache: make(map[string]string),
 	}
 }
@@ -247,6 +269,10 @@ func (s *Service) handleContent(ctx context.Context, message packet, item conten
 		if err != nil {
 			return err
 		}
+		if !s.chatLimiter.Allow(message.ServerName, chat.PlayerName) {
+			s.logger.Warn("chat message rate limited", "server", message.ServerName, "player", chat.PlayerName)
+			return nil
+		}
 		return s.sendChatMessage(ctx, message, chat)
 	case 2:
 		return s.sendServerOnline(ctx, message)
@@ -286,6 +312,51 @@ func (s *Service) handleContent(ctx context.Context, message packet, item conten
 	default:
 		return fmt.Errorf("invalid option from %s", message.ServerName)
 	}
+}
+
+func newChatRateLimiter(max int, window time.Duration, now func() time.Time) *chatRateLimiter {
+	if now == nil {
+		now = time.Now
+	}
+	if max <= 0 || window <= 0 {
+		return &chatRateLimiter{now: now}
+	}
+
+	return &chatRateLimiter{
+		max:     max,
+		window:  window,
+		now:     now,
+		entries: make(map[string]chatRateLimitEntry),
+	}
+}
+
+func (r *chatRateLimiter) Allow(serverName, playerName string) bool {
+	if r.max <= 0 || r.window <= 0 {
+		return true
+	}
+
+	key := strings.ToLower(strings.TrimSpace(serverName)) + "\x00" + strings.ToLower(strings.TrimSpace(playerName))
+	now := r.now()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	entry, ok := r.entries[key]
+	if !ok || now.Sub(entry.windowStart) >= r.window {
+		r.entries[key] = chatRateLimitEntry{
+			windowStart: now,
+			count:       1,
+		}
+		return true
+	}
+
+	if entry.count >= r.max {
+		return false
+	}
+
+	entry.count++
+	r.entries[key] = entry
+	return true
 }
 
 func decodeChatMessage(item content) (chatMessage, error) {

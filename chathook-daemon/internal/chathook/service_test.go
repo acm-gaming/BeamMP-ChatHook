@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCleanseString(t *testing.T) {
@@ -199,5 +200,53 @@ func TestDecodePlayerLeftValid(t *testing.T) {
 	item := content{Type: 4, Content: json.RawMessage(`{"player_name":"Test","early":false}`)}
 	if _, err := decodePlayerLeft(item); err != nil {
 		t.Fatalf("decode left: %v", err)
+	}
+}
+
+func TestChatRateLimiterDisabled(t *testing.T) {
+	limiter := newChatRateLimiter(0, 0, nil)
+	for i := 0; i < 100; i++ {
+		if !limiter.Allow("ServerA", "PlayerA") {
+			t.Fatalf("expected disabled limiter to allow all messages")
+		}
+	}
+}
+
+func TestChatRateLimiterPerPlayerPerServer(t *testing.T) {
+	now := time.Unix(1000, 0)
+	limiter := newChatRateLimiter(2, 10*time.Second, func() time.Time { return now })
+
+	if !limiter.Allow("ServerA", "PlayerA") {
+		t.Fatalf("first message should pass")
+	}
+	if !limiter.Allow("ServerA", "PlayerA") {
+		t.Fatalf("second message should pass")
+	}
+	if limiter.Allow("ServerA", "PlayerA") {
+		t.Fatalf("third message in same window should be limited")
+	}
+
+	if !limiter.Allow("ServerA", "PlayerB") {
+		t.Fatalf("different player should have independent quota")
+	}
+	if !limiter.Allow("ServerB", "PlayerA") {
+		t.Fatalf("same player on different server should have independent quota")
+	}
+}
+
+func TestChatRateLimiterWindowReset(t *testing.T) {
+	now := time.Unix(2000, 0)
+	limiter := newChatRateLimiter(1, 5*time.Second, func() time.Time { return now })
+
+	if !limiter.Allow("ServerA", "PlayerA") {
+		t.Fatalf("first message should pass")
+	}
+	if limiter.Allow("ServerA", "PlayerA") {
+		t.Fatalf("second message in same window should be limited")
+	}
+
+	now = now.Add(6 * time.Second)
+	if !limiter.Allow("ServerA", "PlayerA") {
+		t.Fatalf("message after window reset should pass")
 	}
 }

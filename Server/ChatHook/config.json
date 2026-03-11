@@ -1,7 +1,0 @@
-{
-  "serverName": "BeamMP ChatHook Server",
-  "maxPlayers": 8,
-  "chatHookIp": "172.17.0.1",
-  "udpPort": 30813,
-  "flushIntervalMs": 1000
-}

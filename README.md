@@ -65,12 +65,16 @@ WEBHOOK_URL=https://discord.com/api/webhooks/...
 UDP_PORT=30813
 EXPOSE_TO_NETWORK=172.17.0.1
 AVATAR_URL=https://my-website.com/myImage.jpg
+CHATHOOK_CHAT_RATE_LIMIT_COUNT=6
+CHATHOOK_CHAT_RATE_LIMIT_WINDOW_SEC=10
 ```
 
 - `WEBHOOK_URL` — the webhook URL from your Discord channel settings *(required)*
 - `UDP_PORT` — the port ChatHook listens on for messages from your BeamMP servers
 - `EXPOSE_TO_NETWORK` — the network interface to bind to. If left as `172.17.0.1`, the container binds to the Docker bridge gateway. You generally don't want to expose this to `0.0.0.0`.
 - `AVATAR_URL` — the avatar image shown on webhook messages *(optional)*
+- `CHATHOOK_CHAT_RATE_LIMIT_COUNT` — max chat messages per player per server in the active window (`0` disables, default `6`)
+- `CHATHOOK_CHAT_RATE_LIMIT_WINDOW_SEC` — window size in seconds for chat rate limiting (default `10`)
 
 2. Start the container:
 
@@ -102,6 +106,8 @@ This produces a `chathook-daemon` binary (or `chathook-daemon.exe` on Windows).
 WEBHOOK_URL=https://discord.com/api/webhooks/...
 UDP_PORT=30813
 AVATAR_URL=https://my-website.com/myImage.jpg  # optional
+CHATHOOK_CHAT_RATE_LIMIT_COUNT=6                # optional, 0 disables
+CHATHOOK_CHAT_RATE_LIMIT_WINDOW_SEC=10          # optional
 ```
 
 Or pass them as flags:
@@ -149,7 +155,6 @@ chathook-daemon --webhook-url=https://discord.com/api/webhooks/... --udp-port=30
   "maxPlayers": 8,
   "chatHookIp": "172.17.0.1",
   "udpPort": 30813,
-  "debugHook": false,
   "flushIntervalMs": 1000
 }
 ```
@@ -163,4 +168,3 @@ chathook-daemon --webhook-url=https://discord.com/api/webhooks/... --udp-port=30
 ![img](img/mp_server_startup.jpg)
 
 If everything is set up correctly, you'll see the server started message appear in your Discord channel. The server-side script supports hot-reload, so you don't need to restart to pick up config changes.
-
