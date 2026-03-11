@@ -81,19 +81,6 @@ function M.scriptMessage(messageScriptRef, message)
 	}
 end
 
----@param messageScriptRef string|nil
----@param message string
----@return table
-function M.scriptMessageNoBuf(messageScriptRef, message)
-	return {
-		type = 8,
-		content = {
-			script_ref = messageScriptRef or "",
-			chat_message = message,
-		},
-	}
-end
-
 ---@return table
 function M.serverOnline()
 	return {

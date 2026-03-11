@@ -1,6 +1,7 @@
 FROM gcr.io/distroless/static:nonroot
 
-COPY chathook-daemon /usr/local/bin/chathook-daemon
+ARG TARGETARCH
+COPY linux/${TARGETARCH}/chathook-daemon /usr/local/bin/chathook-daemon
 
 EXPOSE 30813/udp
 
