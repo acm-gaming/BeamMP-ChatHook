@@ -4,7 +4,6 @@
 local VERSION = "0.11" -- 11.01.2026 (DD.MM.YYYY)
 
 local DEFAULT_SCRIPT_REF = "ChatHook"
-local DEBUG_SCRIPT_REF = "DebugHook"
 local EVENT_TIMER_NAME = "chathook_bufprint"
 
 package.loaded["libs/Build"] = nil
@@ -21,7 +20,6 @@ local UDPClient = require("libs/UDPClient")
 local PlayerCount = require("libs/PlayerCount")
 local Color = require("libs/colors")
 
-local isDebugHook = false
 local scriptRef = DEFAULT_SCRIPT_REF
 
 local isStart = _G.IS_START == nil
@@ -107,11 +105,7 @@ function onScriptMessage(message, callbackScriptRef)
 		return
 	end
 
-	if not isDebugHook then
-		Buf:add(Build.scriptMessage(callbackScriptRef, message))
-	else
-		Buf:add(Build.scriptMessageNoBuf(callbackScriptRef, message))
-	end
+	Buf:add(Build.scriptMessage(callbackScriptRef, message))
 end
 
 ---@param playerId integer
@@ -138,8 +132,7 @@ function onInit()
 		return
 	end
 
-	isDebugHook = config.debugHook
-	scriptRef = isDebugHook and DEBUG_SCRIPT_REF or DEFAULT_SCRIPT_REF
+	scriptRef = DEFAULT_SCRIPT_REF
 
 	MP.CancelEventTimer(EVENT_TIMER_NAME)
 	MP.RegisterEvent(EVENT_TIMER_NAME, "bufPrint")
@@ -185,15 +178,11 @@ function onInit()
 	_G.CHATHOOK_SOCKET = socketClient
 	Log.ok("> Initialized UDPSocket", scriptRef)
 
-	if not isDebugHook then
-		MP.RegisterEvent("onChatMessage", "onChatMessage")
-		MP.RegisterEvent("onPlayerConnecting", "onPlayerConnecting")
-		MP.RegisterEvent("onPlayerJoin", "onPlayerJoin")
-		MP.RegisterEvent("onPlayerDisconnect", "onPlayerDisconnect")
-		MP.RegisterEvent("onScriptMessage", "onScriptMessage")
-	else
-		MP.RegisterEvent("onDebugMessage", "onScriptMessage")
-	end
+	MP.RegisterEvent("onChatMessage", "onChatMessage")
+	MP.RegisterEvent("onPlayerConnecting", "onPlayerConnecting")
+	MP.RegisterEvent("onPlayerJoin", "onPlayerJoin")
+	MP.RegisterEvent("onPlayerDisconnect", "onPlayerDisconnect")
+	MP.RegisterEvent("onScriptMessage", "onScriptMessage")
 
 	if isStart then
 		Buf:add(Build.serverOnline())

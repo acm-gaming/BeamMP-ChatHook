@@ -5,7 +5,6 @@
 ---@field maxPlayers integer
 ---@field chatHookIp string
 ---@field udpPort integer
----@field debugHook boolean
 ---@field flushIntervalMs integer
 
 local Config = {}
@@ -83,22 +82,6 @@ end
 
 ---@param config table
 ---@param key string
----@param default boolean
----@return boolean|nil, string?
-local function readBoolean(config, key, default)
-	local value = config[key]
-	if value == nil then
-		return default
-	end
-	if type(value) ~= "boolean" then
-		return nil, string.format('config.%s must be a boolean', key)
-	end
-
-	return value
-end
-
----@param config table
----@param key string
 ---@param default integer
 ---@param minimum integer
 ---@param maximum integer
@@ -141,11 +124,6 @@ local function normalizeConfig(rawConfig)
 		return nil, udpPortError
 	end
 
-	local debugHook, debugHookError = readBoolean(rawConfig, "debugHook", false)
-	if debugHook == nil then
-		return nil, debugHookError
-	end
-
 	local flushIntervalMs, flushIntervalError = readOptionalInteger(rawConfig, "flushIntervalMs", 1000, 250, 10000)
 	if flushIntervalMs == nil then
 		return nil, flushIntervalError
@@ -156,7 +134,6 @@ local function normalizeConfig(rawConfig)
 		maxPlayers = maxPlayers,
 		chatHookIp = chatHookIp,
 		udpPort = udpPort,
-		debugHook = debugHook,
 		flushIntervalMs = flushIntervalMs,
 	}
 end

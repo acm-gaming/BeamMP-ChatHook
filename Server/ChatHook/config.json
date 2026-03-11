@@ -3,6 +3,5 @@
   "maxPlayers": 8,
   "chatHookIp": "172.17.0.1",
   "udpPort": 30813,
-  "debugHook": false,
   "flushIntervalMs": 1000
 }

@@ -6,3 +6,5 @@
 /Server/ChatHook/bin/udp.exe
 /Server/ChatHook/rsocket.so
 /dist/
+!AGENTS.md
+!CLAUDE.md
